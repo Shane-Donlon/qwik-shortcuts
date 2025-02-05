@@ -5,8 +5,6 @@ import path = require("node:path");
 export async function activate(context: vscode.ExtensionContext) {
 
 const workspaceRoot = vscode.workspace.workspaceFolders ? vscode.workspace.workspaceFolders[0].uri.fsPath : undefined;
-let isQwik: boolean | undefined;
-let packageManagerUsed: string | undefined;
 
 const filesByPackageManager: { [key in "npm" | "yarn" | "pnpm" | "bun"]: string } = {
 	npm: 'package-lock.json',
@@ -15,13 +13,20 @@ const filesByPackageManager: { [key in "npm" | "yarn" | "pnpm" | "bun"]: string 
 	bun: 'bun.lock'
 };
 
-if (workspaceRoot) {
-	isQwik = await isQwikProject(`${workspaceRoot}/package.json`);
-	packageManagerUsed = getPackageManager(workspaceRoot,filesByPackageManager)?.command;
-}
+const isQwik = await isQwikProject(`${workspaceRoot}/package.json`);
+const packageManagerUsed = getPackageManager(workspaceRoot as string, filesByPackageManager)?.command;
+const canProceed = Boolean(workspaceRoot && isQwik && packageManagerUsed);
 
 // still need to register the command so that the errors appear and don't crash the extension
  const addTsxRouteCommand = vscode.commands.registerCommand('qwik-shortcuts.addTsxRoute', async () => {
+
+	if(canProceed) {
+		await addTsxRoute(packageManagerUsed as string);
+	}
+
+	// error handling
+		// if these are not here, the extension will crash, and won't show the error messages
+		// this is because context.subscriptions.push(addTsxRouteCommand); will not be called
 	if(!workspaceRoot) {
 		vscode.window.showErrorMessage("Workspace not found.");
 		return;
@@ -35,7 +40,6 @@ if (workspaceRoot) {
 		vscode.window.showErrorMessage(`Package manager was not found, ${packageManagersSearchedFor}`);
 		return;
 	}
-	await addTsxRoute(packageManagerUsed);
 });
 	context.subscriptions.push(addTsxRouteCommand);
 }
