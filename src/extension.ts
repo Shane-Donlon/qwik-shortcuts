@@ -1,26 +1,95 @@
-// The module 'vscode' contains the VS Code extensibility API
-// Import the module and reference it with the alias vscode in your code below
 import * as vscode from 'vscode';
+import fs = require("node:fs");
+import path = require("node:path");
 
-// This method is called when your extension is activated
-// Your extension is activated the very first time the command is executed
-export function activate(context: vscode.ExtensionContext) {
+export async function activate(context: vscode.ExtensionContext) {
 
-	// Use the console to output diagnostic information (console.log) and errors (console.error)
-	// This line of code will only be executed once when your extension is activated
-	console.log('Congratulations, your extension "qwik-shortcuts" is now active!');
+const workspaceRoot = vscode.workspace.workspaceFolders ? vscode.workspace.workspaceFolders[0].uri.fsPath : undefined;
+let isQwik: boolean | undefined;
+let packageManagerUsed: string | undefined;
 
-	// The command has been defined in the package.json file
-	// Now provide the implementation of the command with registerCommand
-	// The commandId parameter must match the command field in package.json
-	const disposable = vscode.commands.registerCommand('qwik-shortcuts.helloWorld', () => {
-		// The code you place here will be executed every time your command is executed
-		// Display a message box to the user
-		vscode.window.showInformationMessage('Hello World from Qwik Shortcuts!');
-	});
+const filesByPackageManager: { [key in "npm" | "yarn" | "pnpm" | "bun"]: string } = {
+	npm: 'package-lock.json',
+	yarn: 'yarn.lock',
+	pnpm: 'pnpm-lock.yaml',
+	bun: 'bun.lock'
+};
 
-	context.subscriptions.push(disposable);
+if (workspaceRoot) {
+	isQwik = await isQwikProject(`${workspaceRoot}/package.json`);
+	packageManagerUsed = getPackageManager(workspaceRoot,filesByPackageManager)?.command;
+}
+
+// still need to register the command so that the errors appear and don't crash the extension
+ const addTsxRouteCommand = vscode.commands.registerCommand('qwik-shortcuts.addTsxRoute', async () => {
+	if(!workspaceRoot) {
+		vscode.window.showErrorMessage("Workspace not found.");
+		return;
+	}
+	if(!isQwik) {
+		vscode.window.showErrorMessage("Not a Qwik Project");
+		return;
+	}
+	if (!packageManagerUsed) {
+		const packageManagersSearchedFor = `${Object.values(filesByPackageManager)}`;
+		vscode.window.showErrorMessage(`Package manager was not found, ${packageManagersSearchedFor}`);
+		return;
+	}
+	await addTsxRoute(packageManagerUsed);
+});
+	context.subscriptions.push(addTsxRouteCommand);
 }
 
 // This method is called when your extension is deactivated
 export function deactivate() {}
+
+interface PackageManager {
+	command: string;
+}
+
+
+
+function getPackageManager(workspaceRoot: string, filesByPackageManager:object ): PackageManager | undefined {
+
+    for (const packageManager in filesByPackageManager) {
+		const filePath = path.join(workspaceRoot, filesByPackageManager[packageManager as keyof typeof filesByPackageManager]);
+        if (fs.existsSync(filePath)) {
+            return { command: packageManager };
+        }
+    }
+    return undefined;
+}
+
+async function addTsxRoute(packageManager: string) {
+
+	const input = await vscode.window.showInputBox({
+		prompt: 'What is the name of the route',
+		placeHolder: 'testing'
+	});
+	if (input) {
+		const terminal = vscode.window.createTerminal("Qwik Shortcuts");
+		terminal.sendText(`${packageManager} run qwik new /${input.toLowerCase().trim().replace(/ /g, '-')}`);
+		terminal.show();
+	} else {
+		vscode.window.showErrorMessage('Route Details Entered.');
+	}
+}
+
+
+async function isQwikProject(packageJsonPath: string): Promise<boolean> {
+    try {
+        const packageJson = await fs.promises.readFile(packageJsonPath, 'utf-8');
+        const data = JSON.parse(packageJson);
+
+        if (
+            data?.devDependencies?.["@qwik.dev/router"] ||
+            data?.devDependencies?.["@builder.io/qwik-city"]
+        ) {
+            return true;
+        }
+        return false;
+    } catch (error) {
+        console.error('Error reading package.json:', error);
+        return false;
+    }
+}

@@ -14,8 +14,8 @@
   "contributes": {
     "commands": [
       {
-        "command": "qwik-shortcuts.helloWorld",
-        "title": "Hello World",
+        "command": "qwik-shortcuts.addTsxRoute",
+        "title": "Add TSX Route",
         "category": "Qwik Shortcuts"
       }
     ]
