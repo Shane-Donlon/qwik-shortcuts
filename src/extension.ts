@@ -67,8 +67,9 @@ async function addTsxRoute(packageManager: string) {
 		placeHolder: 'testing'
 	});
 	if (input) {
+		const transformedInput = transformInput(input);
 		const terminal = vscode.window.createTerminal("Qwik Shortcuts");
-		terminal.sendText(`${packageManager} run qwik new /${input.toLowerCase().trim().replace(/ /g, '-')}`);
+		terminal.sendText(`${packageManager} run qwik new /${transformedInput}`);
 		terminal.show();
 	} else {
 		vscode.window.showErrorMessage('No Route Details Entered.');
@@ -92,4 +93,39 @@ async function isQwikProject(packageJsonPath: string): Promise<boolean> {
         console.error('Error reading package.json:', error);
         return false;
     }
+}
+
+
+/**
+ * Transforms the input string by trimming, converting to lowercase, and replacing spaces with hyphens.
+ * The regex is to find all occurrences of text within parentheses and wraps them in double quotes.
+ * The reason for this is that () causes an error in the terminal, and will not work without the quotes.
+ *
+ * @param {string} input - The input string to be transformed.
+ * @returns {string} - The transformed string.
+ *
+ * Example:
+ * transformInput((admin)/profile))
+ * // returns "(admin)"/profile
+ *
+ * Example Command to give an idea of why:
+ * pnpm run qwik new /"(admin)"/profile
+ */
+
+function transformInput(input: string): string {
+
+	let updatedInput = input.trim().toLowerCase().replace(/ /g, '-');
+	// adds support for grouped layouts
+	// e.g. (admin) -> "(admin)"
+	//
+	const regex = /\([a-zA-Z]+\)/g;
+	const matches = input.match(regex);
+	if (!matches) {
+		return updatedInput;
+	}
+	for (let index = 0; index < matches.length; index++) {
+		const element = matches[index];
+		updatedInput = updatedInput.replace(element, `"${element}"`);
+	}
+	return updatedInput;
 }
