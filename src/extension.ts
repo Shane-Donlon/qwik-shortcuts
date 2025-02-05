@@ -71,7 +71,7 @@ async function addTsxRoute(packageManager: string) {
 		terminal.sendText(`${packageManager} run qwik new /${input.toLowerCase().trim().replace(/ /g, '-')}`);
 		terminal.show();
 	} else {
-		vscode.window.showErrorMessage('Route Details Entered.');
+		vscode.window.showErrorMessage('No Route Details Entered.');
 	}
 }
 
