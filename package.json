@@ -15,7 +15,8 @@
     "commands": [
       {
         "command": "qwik-shortcuts.helloWorld",
-        "title": "Hello World"
+        "title": "Hello World",
+        "category": "Qwik Shortcuts"
       }
     ]
   },
