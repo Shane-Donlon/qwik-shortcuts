@@ -47,7 +47,9 @@ const canProceed = Boolean(workspaceRoot && isQwik && packageManagerUsed);
 
 
 	const addCreateQwikAstroComponentCommand = vscode.commands.registerCommand('qwik-shortcuts.createQwikAstroComponent', async () => {
-		canProceed ? await addQwikAstroComponent() : errorHandling(workspaceRoot, isQwik, packageManagerUsed, filesByPackageManager);
+		const isQwikAstro = await isQwikAstroProject(`${workspaceRoot}/package.json`);
+		const qwikAstroCanProceed = Boolean(workspaceRoot && isQwikAstro && packageManagerUsed);
+		qwikAstroCanProceed ? await addQwikAstroComponent() : errorHandling(workspaceRoot, isQwikAstro, packageManagerUsed, filesByPackageManager);
 });
 
 	context.subscriptions.push(addCreateQwikAstroComponentCommand);
@@ -131,9 +133,22 @@ async function isQwikProject(packageJsonPath: string): Promise<boolean> {
 
         if (
             data?.devDependencies?.["@qwik.dev/router"] ||
-            data?.devDependencies?.["@builder.io/qwik-city"] ||
-			data?.dependencies?.["@qwikdev/astro"] && data?.dependencies?.astro
+            data?.devDependencies?.["@builder.io/qwik-city"]
         ) {
+            return true;
+        }
+        return false;
+    } catch (error) {
+        console.error('Error reading package.json:', error);
+        return false;
+    }
+}
+async function isQwikAstroProject(packageJsonPath: string): Promise<boolean> {
+    try {
+        const packageJson = await fs.promises.readFile(packageJsonPath, 'utf-8');
+        const data = JSON.parse(packageJson);
+
+        if (data?.dependencies?.["@qwikdev/astro"] && data?.dependencies?.astro) {
             return true;
         }
         return false;
