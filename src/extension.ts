@@ -27,19 +27,8 @@ const canProceed = Boolean(workspaceRoot && isQwik && packageManagerUsed);
 	// error handling
 		// if these are not here, the extension will crash, and won't show the error messages
 		// this is because context.subscriptions.push(addTsxRouteCommand); will not be called
-	if(!workspaceRoot) {
-		vscode.window.showErrorMessage("Workspace not found.");
-		return;
-	}
-	if(!isQwik) {
-		vscode.window.showErrorMessage("Not a Qwik Project");
-		return;
-	}
-	if (!packageManagerUsed) {
-		const packageManagersSearchedFor = `${Object.values(filesByPackageManager)}`;
-		vscode.window.showErrorMessage(`Package manager was not found, ${packageManagersSearchedFor}`);
-		return;
-	}
+	errorHandling(workspaceRoot, isQwik, packageManagerUsed, filesByPackageManager);
+
 });
 	context.subscriptions.push(addTsxRouteCommand);
 }
@@ -131,5 +120,25 @@ function transformInput(input: string): string {
 		const element = matches[index];
 		updatedInput = updatedInput.replace(element, `"${element}"`);
 	}
+
 	return updatedInput;
+}
+
+
+
+function errorHandling(workspaceRoot: string | undefined, isQwik: boolean, packageManagerUsed: string | undefined, filesByPackageManager: { [key: string]: string }): boolean|undefined {
+    if (!workspaceRoot) {
+        vscode.window.showErrorMessage("Workspace not found.");
+        return false;
+    }
+    if (!isQwik) {
+        vscode.window.showErrorMessage("Not a Qwik Project");
+        return false;
+    }
+    if (!packageManagerUsed) {
+        const packageManagersSearchedFor = `${Object.values(filesByPackageManager)}`;
+        vscode.window.showErrorMessage(`Package manager was not found, ${packageManagersSearchedFor}`);
+        return false;
+    }
+    return;
 }
