@@ -197,21 +197,3 @@ function errorHandling(workspaceRoot: string | undefined, isQwik: boolean, packa
     }
     return;
 }
-
-
-// async function addMDXRoute(packageManager:string) {
-
-
-// 		const input = await vscode.window.showInputBox({
-// 			prompt: 'What is the name of the route',
-// 			placeHolder: 'testing'
-// 		});
-// 		if (input) {
-// 			const transformedInput = transformInput(input);
-// 			const terminal = vscode.window.createTerminal("Qwik Shortcuts");
-// 			terminal.sendText(`${packageManager} run qwik new /${transformedInput}.mdx`);
-// 			terminal.show();
-// 		} else {
-// 			vscode.window.showErrorMessage('No Route Details Entered.');
-// 		}
-// 	}
