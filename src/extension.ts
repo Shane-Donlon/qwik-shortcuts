@@ -44,6 +44,13 @@ const canProceed = Boolean(workspaceRoot && isQwik && packageManagerUsed);
 
 });
 	context.subscriptions.push(addCreateComponentCommand);
+
+
+	const addCreateQwikAstroComponentCommand = vscode.commands.registerCommand('qwik-shortcuts.createQwikAstroComponent', async () => {
+		canProceed ? await addQwikAstroComponent() : errorHandling(workspaceRoot, isQwik, packageManagerUsed, filesByPackageManager);
+});
+
+	context.subscriptions.push(addCreateQwikAstroComponentCommand);
 }
 
 // This method is called when your extension is deactivated
@@ -124,7 +131,8 @@ async function isQwikProject(packageJsonPath: string): Promise<boolean> {
 
         if (
             data?.devDependencies?.["@qwik.dev/router"] ||
-            data?.devDependencies?.["@builder.io/qwik-city"]
+            data?.devDependencies?.["@builder.io/qwik-city"] ||
+			data?.dependencies?.["@qwikdev/astro"] && data?.dependencies?.astro
         ) {
             return true;
         }
@@ -196,4 +204,84 @@ function errorHandling(workspaceRoot: string | undefined, isQwik: boolean, packa
         return false;
     }
     return;
+}
+
+
+
+async function addQwikAstroComponent() {
+	const input = await vscode.window.showInputBox({
+		prompt: 'What is the name of the component?',
+		placeHolder: 'my-component.tsx',
+		validateInput: (value: string): string | null => {
+			if(!value) {
+				return "Component name cannot be empty";
+			}
+			if (value.includes("/")) {
+				return "Component name cannot contain '/'";
+			}
+			// return empty string for valid input
+			return "";
+		}
+	});
+	if (input) {
+		const name = input.split(".")[0];
+		let extension = input.split(".")[1];
+		if(!extension){
+			extension = "tsx";
+		}
+		const path = vscode.workspace.workspaceFolders ? vscode.workspace.workspaceFolders[0].uri.fsPath : undefined;
+
+		const fileDir = `${path}/src/components/${name}/${name}.${extension}`;
+		   if(fs.existsSync(fileDir)){
+
+			vscode.window.showErrorMessage('Component Already Exists');
+			return;
+		   }
+		const contents = await generateComponent(`${path}/package.json`, name, extension);
+		const componentDir = `${path}/src/components/${name}`;
+		fs.mkdirSync(componentDir, { recursive: true });
+		fs.writeFileSync(`${path}/src/components/${name}/${name}.${extension}`, contents);
+        }
+		 else {
+		vscode.window.showErrorMessage('No Component Details Entered.');
+	}
+}
+
+
+
+
+
+async function generateComponent(packageJsonPath: string, componentName: string,fileExtension: string) {
+	let importStatement = "import { component$ } from '@qwik.dev/core';";
+	let content =`
+
+export interface [name]Props {
+
+}
+
+export const [name] = component$<[name]Props>((props) => {
+  return (
+    <div>
+      [name] component works!
+    </div>
+  );
+});`;
+	const packageJson = await fs.readFileSync(packageJsonPath, 'utf-8');
+	const data = JSON.parse(packageJson);
+	const isV1 = data?.dependencies?.["@builder.io/qwik"];
+
+	if(isV1){
+		importStatement = "import { component$ } from '@builder.io/qwik';";
+	}
+	if(fileExtension === "jsx" || fileExtension === "js"){
+		content = `
+
+export const [name] = component$((props) => {
+  return <div>[name] component works!</div>;
+});`;}
+
+	content = content.replaceAll("[name]", componentName);
+	const componentDetails = `${importStatement}${content}`;
+	return componentDetails;
+
 }

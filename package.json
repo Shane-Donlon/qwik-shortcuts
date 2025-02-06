@@ -32,6 +32,11 @@
         "command": "qwik-shortcuts.createComponent",
         "title": "Create Component",
         "category": "Qwik Shortcuts"
+      },
+      {
+        "command": "qwik-shortcuts.createQwikAstroComponent",
+        "title": "Create Qwik Astro Component",
+        "category": "Qwik Astro Shortcuts"
       }
     ]
   },
