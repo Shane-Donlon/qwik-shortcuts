@@ -33,6 +33,11 @@ const canProceed = Boolean(workspaceRoot && isQwik && packageManagerUsed);
 });
 	context.subscriptions.push(addMDXRouteCommand);
 
+	const addMDRouteCommand = vscode.commands.registerCommand('qwik-shortcuts.addMDRoute', async () => {
+		canProceed ? await addRoute(packageManagerUsed as string, ".md" ) : errorHandling(workspaceRoot, isQwik, packageManagerUsed, filesByPackageManager);
+
+});
+	context.subscriptions.push(addMDRouteCommand);
 }
 
 // This method is called when your extension is deactivated

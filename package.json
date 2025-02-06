@@ -17,6 +17,16 @@
         "command": "qwik-shortcuts.addTsxRoute",
         "title": "Add TSX Route",
         "category": "Qwik Shortcuts"
+      },
+      {
+        "command": "qwik-shortcuts.addMDXRoute",
+        "title": "Add MDX Route",
+        "category": "Qwik Shortcuts"
+      },
+      {
+        "command": "qwik-shortcuts.addMDRoute",
+        "title": "Add MD Route",
+        "category": "Qwik Shortcuts"
       }
     ]
   },
