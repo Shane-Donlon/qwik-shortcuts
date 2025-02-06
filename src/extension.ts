@@ -19,18 +19,16 @@ const canProceed = Boolean(workspaceRoot && isQwik && packageManagerUsed);
 
 // still need to register the command so that the errors appear and don't crash the extension
  const addTsxRouteCommand = vscode.commands.registerCommand('qwik-shortcuts.addTsxRoute', async () => {
-
-	if(canProceed) {
-		await addTsxRoute(packageManagerUsed as string);
-	}
-
-	// error handling
+// error handling
 		// if these are not here, the extension will crash, and won't show the error messages
 		// this is because context.subscriptions.push(addTsxRouteCommand); will not be called
-	errorHandling(workspaceRoot, isQwik, packageManagerUsed, filesByPackageManager);
+	canProceed ? await addRoute(packageManagerUsed as string) : errorHandling(workspaceRoot, isQwik, packageManagerUsed, filesByPackageManager);
 
 });
 	context.subscriptions.push(addTsxRouteCommand);
+
+
+
 }
 
 // This method is called when your extension is deactivated
@@ -53,8 +51,7 @@ function getPackageManager(workspaceRoot: string, filesByPackageManager:object )
     return undefined;
 }
 
-async function addTsxRoute(packageManager: string) {
-
+async function addRoute(packageManager: string, fileExtension?: string ) {
 	const input = await vscode.window.showInputBox({
 		prompt: 'What is the name of the route',
 		placeHolder: 'testing'
@@ -62,7 +59,7 @@ async function addTsxRoute(packageManager: string) {
 	if (input) {
 		const transformedInput = transformInput(input);
 		const terminal = vscode.window.createTerminal("Qwik Shortcuts");
-		terminal.sendText(`${packageManager} run qwik new /${transformedInput}`);
+		terminal.sendText(`${packageManager} run qwik new /${transformedInput}${fileExtension ? `.${fileExtension}` : ''}`);
 		terminal.show();
 	} else {
 		vscode.window.showErrorMessage('No Route Details Entered.');
@@ -142,3 +139,21 @@ function errorHandling(workspaceRoot: string | undefined, isQwik: boolean, packa
     }
     return;
 }
+
+
+// async function addMDXRoute(packageManager:string) {
+
+
+// 		const input = await vscode.window.showInputBox({
+// 			prompt: 'What is the name of the route',
+// 			placeHolder: 'testing'
+// 		});
+// 		if (input) {
+// 			const transformedInput = transformInput(input);
+// 			const terminal = vscode.window.createTerminal("Qwik Shortcuts");
+// 			terminal.sendText(`${packageManager} run qwik new /${transformedInput}.mdx`);
+// 			terminal.show();
+// 		} else {
+// 			vscode.window.showErrorMessage('No Route Details Entered.');
+// 		}
+// 	}
