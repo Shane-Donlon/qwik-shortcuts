@@ -27,7 +27,11 @@ const canProceed = Boolean(workspaceRoot && isQwik && packageManagerUsed);
 });
 	context.subscriptions.push(addTsxRouteCommand);
 
+	const addMDXRouteCommand = vscode.commands.registerCommand('qwik-shortcuts.addMDXRoute', async () => {
+		canProceed ? await addRoute(packageManagerUsed as string, ".mdx" ) : errorHandling(workspaceRoot, isQwik, packageManagerUsed, filesByPackageManager);
 
+});
+	context.subscriptions.push(addMDXRouteCommand);
 
 }
 
@@ -59,7 +63,7 @@ async function addRoute(packageManager: string, fileExtension?: string ) {
 	if (input) {
 		const transformedInput = transformInput(input);
 		const terminal = vscode.window.createTerminal("Qwik Shortcuts");
-		terminal.sendText(`${packageManager} run qwik new /${transformedInput}${fileExtension ? `.${fileExtension}` : ''}`);
+		terminal.sendText(`${packageManager} run qwik new /${transformedInput}${fileExtension ? `${fileExtension}` : ''}`);
 		terminal.show();
 	} else {
 		vscode.window.showErrorMessage('No Route Details Entered.');
@@ -105,11 +109,19 @@ async function isQwikProject(packageJsonPath: string): Promise<boolean> {
 function transformInput(input: string): string {
 
 	let updatedInput = input.trim().toLowerCase().replace(/ /g, '-');
+
 	// adds support for grouped layouts
 	// e.g. (admin) -> "(admin)"
 	//
 	const regex = /\([a-zA-Z]+\)/g;
 	const matches = input.match(regex);
+	// replace all file extensions
+	const extensions = [".mdx", ".md", ".tsx", ".ts",".js", ".jsx","index"];
+	for (let index = 0; index < extensions.length; index++) {
+		const element = extensions[index];
+		updatedInput = updatedInput.replaceAll(element, "");
+	}
+
 	if (!matches) {
 		return updatedInput;
 	}
