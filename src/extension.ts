@@ -69,7 +69,7 @@ function getPackageManager(workspaceRoot: string, filesByPackageManager:object )
 async function addRoute(packageManager: string, fileExtension?: string ) {
 	const input = await vscode.window.showInputBox({
 		prompt: 'What is the name of the route?',
-		placeHolder: 'testing/abc',
+		placeHolder: 'product/[id]',
 		validateInput: (value: string): string | null => {
 			if(!value) {
 				return "Route name cannot be empty";
@@ -92,7 +92,7 @@ async function addRoute(packageManager: string, fileExtension?: string ) {
 async function addComponent(packageManager: string ) {
 	const input = await vscode.window.showInputBox({
 		prompt: 'What is the name of the component?',
-		placeHolder: 'test',
+		placeHolder: 'my-component',
 		validateInput: (value: string): string | null => {
 			if(!value) {
 				return "Component name cannot be empty";
