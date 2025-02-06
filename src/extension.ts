@@ -38,6 +38,12 @@ const canProceed = Boolean(workspaceRoot && isQwik && packageManagerUsed);
 
 });
 	context.subscriptions.push(addMDRouteCommand);
+
+	const addCreateComponentCommand = vscode.commands.registerCommand('qwik-shortcuts.createComponent', async () => {
+		canProceed ? await addComponent(packageManagerUsed as string ) : errorHandling(workspaceRoot, isQwik, packageManagerUsed, filesByPackageManager);
+
+});
+	context.subscriptions.push(addCreateComponentCommand);
 }
 
 // This method is called when your extension is deactivated
@@ -62,8 +68,15 @@ function getPackageManager(workspaceRoot: string, filesByPackageManager:object )
 
 async function addRoute(packageManager: string, fileExtension?: string ) {
 	const input = await vscode.window.showInputBox({
-		prompt: 'What is the name of the route',
-		placeHolder: 'testing'
+		prompt: 'What is the name of the route?',
+		placeHolder: 'testing/abc',
+		validateInput: (value: string): string | null => {
+			if(!value) {
+				return "Route name cannot be empty";
+			}
+			// return empty string for valid input
+			return "";
+		}
 	});
 	if (input) {
 		const transformedInput = transformInput(input);
@@ -74,6 +87,34 @@ async function addRoute(packageManager: string, fileExtension?: string ) {
 		vscode.window.showErrorMessage('No Route Details Entered.');
 	}
 }
+
+
+async function addComponent(packageManager: string ) {
+	const input = await vscode.window.showInputBox({
+		prompt: 'What is the name of the component?',
+		placeHolder: 'test',
+		validateInput: (value: string): string | null => {
+			if(!value) {
+				return "Component name cannot be empty";
+			}
+			if (value.includes("/")) {
+				return "Component name cannot contain '/'";
+			}
+			// return empty string for valid input
+			return "";
+		}
+	});
+	if (input) {
+		const transformedInput = transformInput(input);
+		const terminal = vscode.window.createTerminal("Qwik Shortcuts");
+
+		terminal.sendText(`${packageManager} run qwik new ${transformedInput}`);
+		terminal.show();
+	} else {
+		vscode.window.showErrorMessage('No Component Details Entered.');
+	}
+}
+
 
 
 async function isQwikProject(packageJsonPath: string): Promise<boolean> {
