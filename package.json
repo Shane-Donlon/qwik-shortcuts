@@ -2,6 +2,7 @@
   "name": "qwik-shortcuts",
   "displayName": "Qwik Shortcuts",
   "description": "Shortcuts for Qwik Commands",
+  "publisher": "qwik-shortcuts",
   "version": "0.0.1",
   "engines": {
     "vscode": "^1.96.0"
@@ -34,8 +35,13 @@
         "category": "Qwik Shortcuts"
       },
       {
-        "command": "qwik-shortcuts.createQwikAstroComponent",
-        "title": "Create Qwik Astro Component",
+        "command": "qwik-shortcuts.addCreateQwikAstroJSXComponentCommand",
+        "title": "Create Qwik Astro JSX Component",
+        "category": "Qwik Astro Shortcuts"
+      },
+      {
+        "command": "qwik-shortcuts.addCreateQwikAstroTSXComponentCommand",
+        "title": "Create Qwik Astro TSX Component",
         "category": "Qwik Astro Shortcuts"
       }
     ]
