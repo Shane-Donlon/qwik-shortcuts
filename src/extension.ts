@@ -130,6 +130,28 @@ export async function activate(context: vscode.ExtensionContext) {
   );
 
   context.subscriptions.push(addCreateQwikAstroTSXComponentCommand);
+
+  const addCreateAstroRouteComponentCommand = vscode.commands.registerCommand(
+    "qwik-shortcuts.addCreateAstroRouteComponentCommand",
+    async () => {
+      const isQwikAstro = await isQwikAstroProject(
+        `${workspaceRoot}/package.json`
+      );
+      const qwikAstroCanProceed = Boolean(
+        workspaceRoot && isQwikAstro && packageManagerUsed
+      );
+      qwikAstroCanProceed
+        ? await addAstroRoute(context,"route",`${workspaceRoot}/package.json`)
+        : errorHandling(
+            workspaceRoot,
+            isQwikAstro,
+            packageManagerUsed,
+            filesByPackageManager
+          );
+    }
+  );
+
+  context.subscriptions.push(addCreateAstroRouteComponentCommand);
 }
 
 // This method is called when your extension is deactivated
@@ -356,13 +378,13 @@ async function addQwikAstroComponent(
 
 async function getTemplate(
   context: vscode.ExtensionContext,
-  type: "tsx" | "jsx",
+  type: "tsx" | "jsx" | "route",
   packageJsonPath: string,
-  componentName: string
+  componentName?: string
 ): Promise<string> {
   const extensionPath = context.extensionPath;
 
-  const templateName = `${type.toUpperCase()}Component.txt`;
+  const templateName = `${type}Component.txt`;
   let templatePath = path.resolve(extensionPath, `src/templates/${templateName}`);
 
   if (!fs.existsSync(templatePath)) {
@@ -385,6 +407,16 @@ async function getTemplate(
 
 
   let content = await fs.promises.readFile(templatePath, "utf-8");
+
+const exceptions = ["route"];
+for (let index = 0; index < exceptions.length; index++) {
+  const element = exceptions[index];
+  if (type === element) {
+    return content;
+  }
+}
+
+if(componentName){
   const packageJson = await fs.promises.readFile(packageJsonPath, "utf-8");
   const data = JSON.parse(packageJson);
   const isV1 = data?.dependencies?.["@builder.io/qwik"];
@@ -398,6 +430,7 @@ async function getTemplate(
     );
     content = updatedImports;
   }
+}
   return content;
 }
 
@@ -442,4 +475,64 @@ function searchFile(dir: string, fileName: string): string | undefined {
     }
   }
   return undefined;
+}
+
+async function addAstroRoute(
+  context: vscode.ExtensionContext,
+  type: "route",
+  packageJsonPath: string,
+  componentName?: string
+) {
+  const input = await vscode.window.showInputBox({
+    prompt: "What is the name of the route?",
+    placeHolder: "product/[id]",
+    validateInput: (value: string): string | null => {
+      if (!value) {
+        return "Route name cannot be empty";
+      }
+
+      // return empty string for valid input
+      return "";
+    },
+  });
+  if (input) {
+    let transformedInput = transformInput(input);
+    if (transformedInput.endsWith("/")) {
+      transformedInput = transformedInput.slice(0, -1);
+    }
+
+    const template = await getTemplate(context, "route", packageJsonPath);
+    let contents = template;
+
+    const workspaceFolders = vscode.workspace.workspaceFolders;
+    if (!workspaceFolders) {
+      vscode.window.showErrorMessage("Workspace not found.");
+      return;
+    }
+    const workspaceRoot = workspaceFolders[0].uri.fsPath;
+    const inputParts = transformedInput.split('/');
+    let routeDir = `${workspaceRoot}/src/pages/`;
+    let fileName = transformedInput;
+
+    if (inputParts.length > 1) {
+      fileName = inputParts.pop() as string;
+      routeDir = `${routeDir}/${inputParts.join('/')}`;
+
+      for (let index = 0; index < inputParts.length; index++) {
+        contents = contents.replace("../", "../../");
+      }
+
+    }
+
+    if (fs.existsSync(`${routeDir}/${fileName}.astro`)) {
+      vscode.window.showErrorMessage("Route Already Exists");
+      return;
+    }
+
+    fs.mkdirSync(routeDir, { recursive: true });
+    const routeFile = `${routeDir}/${fileName}.astro`;
+    fs.writeFileSync(routeFile, contents);
+
+    return contents;
+  }
 }
