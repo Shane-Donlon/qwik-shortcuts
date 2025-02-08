@@ -10,7 +10,13 @@
   "categories": [
     "Other"
   ],
-  "activationEvents": [],
+  "activationEvents": [
+    "workspaceContains:**/astro.config.ts",
+    "workspaceContains:**/qwik.env.d.ts",
+    "workspaceContains:**/.vscode/qwik-city.code-snippets",
+    "workspaceContains:**/.vscode/qwik.code-snippets",
+    "workspaceContains:**/.vscode/qwik-shortcuts"
+  ],
   "main": "./out/extension.js",
   "contributes": {
     "commands": [
