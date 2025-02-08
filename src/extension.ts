@@ -1,8 +1,10 @@
 import * as vscode from "vscode";
 import fs = require("node:fs");
 import path = require("node:path");
+import { json } from "node:stream/consumers";
 
 export async function activate(context: vscode.ExtensionContext) {
+
   const workspaceRoot = vscode.workspace.workspaceFolders
     ? vscode.workspace.workspaceFolders[0].uri.fsPath
     : undefined;
@@ -16,7 +18,11 @@ export async function activate(context: vscode.ExtensionContext) {
     bun: "bun.lock",
   };
 
-  const isQwik = await isQwikProject(`${workspaceRoot}/package.json`);
+const packageJSonContents = JSON.parse(fs.readFileSync(`${workspaceRoot}/package.json`, "utf-8")) || undefined;
+  const isQwikAstro = packageJSonContents?.dependencies?.["@qwikdev/astro"] && packageJSonContents?.dependencies?.astro;
+
+  const isQwik = packageJSonContents?.devDependencies?.["@qwik.dev/router"] || packageJSonContents?.devDependencies?.["@builder.io/qwik-city"];
+
   const packageManagerUsed = getPackageManager(
     workspaceRoot as string,
     filesByPackageManager
@@ -90,14 +96,12 @@ export async function activate(context: vscode.ExtensionContext) {
   const addCreateQwikAstroJSXComponentCommand = vscode.commands.registerCommand(
     "qwik-shortcuts.addCreateQwikAstroJSXComponentCommand",
     async () => {
-      const isQwikAstro = await isQwikAstroProject(
-        `${workspaceRoot}/package.json`
-      );
+
       const qwikAstroCanProceed = Boolean(
         workspaceRoot && isQwikAstro && packageManagerUsed
       );
       qwikAstroCanProceed
-        ? await addQwikAstroComponent(context, "jsx")
+        ? await addQwikAstroComponent(context, "jsx", packageJSonContents as JSON)
         : errorHandling(
             workspaceRoot,
             isQwikAstro,
@@ -112,9 +116,7 @@ export async function activate(context: vscode.ExtensionContext) {
   const addCreateQwikAstroTSXComponentCommand = vscode.commands.registerCommand(
     "qwik-shortcuts.addCreateQwikAstroTSXComponentCommand",
     async () => {
-      const isQwikAstro = await isQwikAstroProject(
-        `${workspaceRoot}/package.json`
-      );
+
       const qwikAstroCanProceed = Boolean(
         workspaceRoot && isQwikAstro && packageManagerUsed
       );
@@ -134,14 +136,11 @@ export async function activate(context: vscode.ExtensionContext) {
   const addCreateAstroRouteComponentCommand = vscode.commands.registerCommand(
     "qwik-shortcuts.addCreateAstroRouteComponentCommand",
     async () => {
-      const isQwikAstro = await isQwikAstroProject(
-        `${workspaceRoot}/package.json`
-      );
       const qwikAstroCanProceed = Boolean(
         workspaceRoot && isQwikAstro && packageManagerUsed
       );
       qwikAstroCanProceed
-        ? await addAstroRoute(context,"route",`${workspaceRoot}/package.json`)
+        ? await addAstroRoute(context,"route",packageJSonContents)
         : errorHandling(
             workspaceRoot,
             isQwikAstro,
@@ -156,9 +155,7 @@ export async function activate(context: vscode.ExtensionContext) {
   const addQwikUI = vscode.commands.registerCommand(
     "qwik-shortcuts.addQwikUI",
     async () => {
-      const isQwikUI = await isQwikUIProject(
-        `${workspaceRoot}/package.json`
-      );
+      const isQwikUI = packageJSonContents.devDependencies?.["@qwik-ui/headless"] || packageJSonContents.dependencies?.["@qwik-ui/headless"] || packageJSonContents?.devDependencies?.["@qwik-ui/styled"] || packageJSonContents?.dependencies?.["@qwik-ui/styled"];
       const qwikUICanProceed = Boolean(
         workspaceRoot && isQwikUI && packageManagerUsed
       );
@@ -253,53 +250,10 @@ async function addComponent(packageManager: string) {
   }
 }
 
-async function isQwikProject(packageJsonPath: string): Promise<boolean> {
-  try {
-    const packageJson = await fs.promises.readFile(packageJsonPath, "utf-8");
-    const data = JSON.parse(packageJson);
 
-    if (
-      data?.devDependencies?.["@qwik.dev/router"] ||
-      data?.devDependencies?.["@builder.io/qwik-city"]
-    ) {
-      return true;
-    }
-    return false;
-  } catch (error) {
-    console.error("Error reading package.json:", error);
-    return false;
-  }
-}
-async function isQwikAstroProject(packageJsonPath: string): Promise<boolean> {
-  try {
-    const packageJson = await fs.promises.readFile(packageJsonPath, "utf-8");
-    const data = JSON.parse(packageJson);
 
-    if (data?.dependencies?.["@qwikdev/astro"] && data?.dependencies?.astro) {
-      return true;
-    }
-    return false;
-  } catch (error) {
-    console.error("Error reading package.json:", error);
-    return false;
-  }
-}
 
-async function isQwikUIProject(packageJsonPath: string): Promise<boolean> {
-  try {
-    const packageJson = await fs.promises.readFile(packageJsonPath, "utf-8");
-    const data = JSON.parse(packageJson);
 
-    if (data?.devDependencies?.["@qwik-ui/headless"] || data?.dependencies?.["@qwik-ui/headless"] || data?.devDependencies?.["@qwik-ui/styled"] || data?.dependencies?.["@qwik-ui/styled"]) {
-      return true;
-    }
-
-    return false;
-  } catch (error) {
-    console.error("Error reading package.json:", error);
-    return false;
-  }
-}
 
 /**
  * Transforms the input string by trimming, converting to lowercase, and replacing spaces with hyphens.
@@ -371,7 +325,8 @@ function errorHandling(
 
 async function addQwikAstroComponent(
   context: vscode.ExtensionContext,
-  type: "tsx" | "jsx" = "tsx"
+  type: "tsx" | "jsx" = "tsx",
+  packageJSonContents?: JSON
 ) {
   const input = await vscode.window.showInputBox({
     prompt: "What is the name of the component?",
@@ -400,7 +355,7 @@ async function addQwikAstroComponent(
     const contents = await getTemplate(
       context,
       type,
-      `${path}/package.json`,
+      packageJSonContents as JSON,
       name
     );
     const componentDir = `${path}/src/components/${name}`;
@@ -417,11 +372,10 @@ async function addQwikAstroComponent(
 async function getTemplate(
   context: vscode.ExtensionContext,
   type: "tsx" | "jsx" | "route",
-  packageJsonPath: string,
+  packageJsonFileContents: JSON,
   componentName?: string
 ): Promise<string> {
-  const extensionPath = context.extensionPath;
-
+  const extensionPath = context.extensionPath;;
   const templateName = `${type}Component.txt`;
   let templatePath = path.resolve(extensionPath, `src/templates/${templateName}`);
 
@@ -455,9 +409,12 @@ for (let index = 0; index < exceptions.length; index++) {
 }
 
 if(componentName){
-  const packageJson = await fs.promises.readFile(packageJsonPath, "utf-8");
-  const data = JSON.parse(packageJson);
-  const isV1 = data?.dependencies?.["@builder.io/qwik"];
+  const packageJson = packageJsonFileContents;
+
+  interface PackageJson {
+    dependencies?: { [key: string]: string };
+  }
+  const isV1 = (packageJson as PackageJson)?.dependencies?.["@builder.io/qwik"];
   content = content.replaceAll("interface[name]Props", "interface [name]Props");
   content = content.replaceAll("[name]", componentName);
 
@@ -518,7 +475,7 @@ function searchFile(dir: string, fileName: string): string | undefined {
 async function addAstroRoute(
   context: vscode.ExtensionContext,
   type: "route",
-  packageJsonPath: string,
+  packageJsonFileContents: JSON,
   componentName?: string
 ) {
   const input = await vscode.window.showInputBox({
@@ -539,7 +496,7 @@ async function addAstroRoute(
       transformedInput = transformedInput.slice(0, -1);
     }
 
-    const template = await getTemplate(context, "route", packageJsonPath);
+    const template = await getTemplate(context, "route", packageJsonFileContents);
     let contents = template;
 
     const workspaceFolders = vscode.workspace.workspaceFolders;
