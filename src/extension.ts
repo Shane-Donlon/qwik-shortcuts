@@ -152,6 +152,28 @@ export async function activate(context: vscode.ExtensionContext) {
   );
 
   context.subscriptions.push(addCreateAstroRouteComponentCommand);
+
+  const addQwikUI = vscode.commands.registerCommand(
+    "qwik-shortcuts.addQwikUI",
+    async () => {
+      const isQwikUI = await isQwikUIProject(
+        `${workspaceRoot}/package.json`
+      );
+      const qwikUICanProceed = Boolean(
+        workspaceRoot && isQwikUI && packageManagerUsed
+      );
+      qwikUICanProceed
+        ? await addQwikUIComponent("https://qwikui.com/")
+        : errorHandling(
+            workspaceRoot,
+            isQwikUI,
+            packageManagerUsed,
+            filesByPackageManager
+          );
+    }
+  );
+
+  context.subscriptions.push(addQwikUI);
 }
 
 // This method is called when your extension is deactivated
@@ -256,6 +278,22 @@ async function isQwikAstroProject(packageJsonPath: string): Promise<boolean> {
     if (data?.dependencies?.["@qwikdev/astro"] && data?.dependencies?.astro) {
       return true;
     }
+    return false;
+  } catch (error) {
+    console.error("Error reading package.json:", error);
+    return false;
+  }
+}
+
+async function isQwikUIProject(packageJsonPath: string): Promise<boolean> {
+  try {
+    const packageJson = await fs.promises.readFile(packageJsonPath, "utf-8");
+    const data = JSON.parse(packageJson);
+
+    if (data?.devDependencies?.["@qwik-ui/headless"] || data?.dependencies?.["@qwik-ui/headless"] || data?.devDependencies?.["@qwik-ui/styled"] || data?.dependencies?.["@qwik-ui/styled"]) {
+      return true;
+    }
+
     return false;
   } catch (error) {
     console.error("Error reading package.json:", error);
@@ -535,4 +573,39 @@ async function addAstroRoute(
 
     return contents;
   }
+}
+
+async function addQwikUIComponent(url: string) {
+  const panel = vscode.window.createWebviewPanel(
+    'qwikUI', // Identifies the type of the webview.
+    'Qwik UI', // Title of the panel displayed to the Dev
+    vscode.ViewColumn.Beside,
+    {
+      enableScripts: true // Enable JavaScript in the webview
+    }
+  ); panel.webview.html = getWebviewContent(url as string);
+}
+
+
+function getWebviewContent(url: string) {
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Qwik UI</title>
+  <style>
+    body, html, iframe {
+      width: 100%;
+      height: 100%;
+      margin: 0;
+      padding: 0;
+      border: none;
+    }
+  </style>
+</head>
+<body>
+  <iframe src="${url}" frameborder="0"></iframe>
+</body>
+</html>`;
 }

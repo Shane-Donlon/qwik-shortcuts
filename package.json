@@ -48,6 +48,11 @@
         "command": "qwik-shortcuts.addCreateAstroRouteComponentCommand",
         "title": "Create Astro Route Component",
         "category": "Qwik Astro Shortcuts"
+      },
+      {
+        "command": "qwik-shortcuts.addQwikUI",
+        "title": "Qwik UI Panel",
+        "category": "Qwik UI Shortcuts"
       }
     ]
   },
