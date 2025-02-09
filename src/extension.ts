@@ -20,18 +20,38 @@ export async function activate(context: vscode.ExtensionContext) {
 		bun: "bun.lock",
 	};
 
-	const isQwikAstro =
-		packageJSonContents?.dependencies?.["@qwikdev/astro"] &&
-		packageJSonContents?.dependencies?.astro;
-	const isQwik =
-		packageJSonContents?.devDependencies?.["@qwik.dev/router"] ||
-		packageJSonContents?.devDependencies?.["@builder.io/qwik-city"];
-
 	const packageManagerUsed = getPackageManager(
 		workspaceRoot as string,
 		filesByPackageManager,
 	)?.command;
-	const canProceed = Boolean(workspaceRoot && isQwik && packageManagerUsed);
+
+	const canProceed = () => {
+		const packageJSonContents =
+			JSON.parse(fs.readFileSync(`${workspaceRoot}/package.json`, "utf-8")) ||
+			undefined;
+		const isQwik =
+			packageJSonContents?.devDependencies?.["@qwik.dev/router"] ||
+			packageJSonContents?.devDependencies?.["@builder.io/qwik-city"];
+
+		return Boolean(workspaceRoot && isQwik);
+	};
+
+	const currentQwikAstroCanProceed = () => {
+		const packageJSonContents =
+			JSON.parse(fs.readFileSync(`${workspaceRoot}/package.json`, "utf-8")) ||
+			undefined;
+
+		const isQwikAstro =
+			packageJSonContents?.dependencies?.["@qwikdev/astro"] &&
+			packageJSonContents?.dependencies?.astro;
+
+		const packageManagerUsed = getPackageManager(
+			workspaceRoot as string,
+			filesByPackageManager,
+		)?.command;
+
+		return Boolean(workspaceRoot && isQwikAstro && packageManagerUsed);
+	};
 
 	// still need to register the command so that the errors appear and don't crash the extension
 	const addTsxRouteCommand = vscode.commands.registerCommand(
@@ -40,14 +60,9 @@ export async function activate(context: vscode.ExtensionContext) {
 			// error handling
 			// if these are not here, the extension will crash, and won't show the error messages
 			// this is because context.subscriptions.push(addTsxRouteCommand); will not be called
-			canProceed
+			canProceed()
 				? await addRoute(packageManagerUsed as string)
-				: errorHandling(
-						workspaceRoot,
-						isQwik,
-						packageManagerUsed,
-						filesByPackageManager,
-					);
+				: vscode.window.showErrorMessage("Not a Qwik Project");
 		},
 	);
 	context.subscriptions.push(addTsxRouteCommand);
@@ -55,14 +70,9 @@ export async function activate(context: vscode.ExtensionContext) {
 	const addMDXRouteCommand = vscode.commands.registerCommand(
 		"qwik-shortcuts.addMDXRoute",
 		async () => {
-			canProceed
+			canProceed()
 				? await addRoute(packageManagerUsed as string, ".mdx")
-				: errorHandling(
-						workspaceRoot,
-						isQwik,
-						packageManagerUsed,
-						filesByPackageManager,
-					);
+				: vscode.window.showErrorMessage("Not a Qwik Project");
 		},
 	);
 	context.subscriptions.push(addMDXRouteCommand);
@@ -70,14 +80,9 @@ export async function activate(context: vscode.ExtensionContext) {
 	const addMDRouteCommand = vscode.commands.registerCommand(
 		"qwik-shortcuts.addMDRoute",
 		async () => {
-			canProceed
+			canProceed()
 				? await addRoute(packageManagerUsed as string, ".md")
-				: errorHandling(
-						workspaceRoot,
-						isQwik,
-						packageManagerUsed,
-						filesByPackageManager,
-					);
+				: vscode.window.showErrorMessage("Not a Qwik Project");
 		},
 	);
 	context.subscriptions.push(addMDRouteCommand);
@@ -85,14 +90,9 @@ export async function activate(context: vscode.ExtensionContext) {
 	const addCreateComponentCommand = vscode.commands.registerCommand(
 		"qwik-shortcuts.createComponent",
 		async () => {
-			canProceed
+			canProceed()
 				? await addComponent(packageManagerUsed as string)
-				: errorHandling(
-						workspaceRoot,
-						isQwik,
-						packageManagerUsed,
-						filesByPackageManager,
-					);
+				: vscode.window.showErrorMessage("Not a Qwik Project");
 		},
 	);
 	context.subscriptions.push(addCreateComponentCommand);
@@ -100,21 +100,15 @@ export async function activate(context: vscode.ExtensionContext) {
 	const addCreateQwikAstroJSXComponentCommand = vscode.commands.registerCommand(
 		"qwik-shortcuts.addCreateQwikAstroJSXComponentCommand",
 		async () => {
-			const qwikAstroCanProceed = Boolean(
-				workspaceRoot && isQwikAstro && packageManagerUsed,
-			);
-			qwikAstroCanProceed
-				? await addQwikAstroComponent(
-						context,
-						"jsx",
-						packageJSonContents as JSON,
-					)
-				: errorHandling(
-						workspaceRoot,
-						isQwikAstro,
-						packageManagerUsed,
-						filesByPackageManager,
-					);
+			if (currentQwikAstroCanProceed()) {
+				await addQwikAstroComponent(
+					context,
+					"jsx",
+					packageJSonContents as JSON,
+				);
+			} else {
+				vscode.window.showErrorMessage("Not a Qwik Astro Project");
+			}
 		},
 	);
 
@@ -123,17 +117,9 @@ export async function activate(context: vscode.ExtensionContext) {
 	const addCreateQwikAstroTSXComponentCommand = vscode.commands.registerCommand(
 		"qwik-shortcuts.addCreateQwikAstroTSXComponentCommand",
 		async () => {
-			const qwikAstroCanProceed = Boolean(
-				workspaceRoot && isQwikAstro && packageManagerUsed,
-			);
-			qwikAstroCanProceed
-				? await addQwikAstroComponent(context, "tsx")
-				: errorHandling(
-						workspaceRoot,
-						isQwikAstro,
-						packageManagerUsed,
-						filesByPackageManager,
-					);
+			currentQwikAstroCanProceed()
+				? await addQwikAstroComponent(context)
+				: vscode.window.showErrorMessage("Not a Qwik Astro Project");
 		},
 	);
 
@@ -142,40 +128,41 @@ export async function activate(context: vscode.ExtensionContext) {
 	const addCreateAstroRouteComponentCommand = vscode.commands.registerCommand(
 		"qwik-shortcuts.addCreateAstroRouteComponentCommand",
 		async () => {
-			const qwikAstroCanProceed = Boolean(
-				workspaceRoot && isQwikAstro && packageManagerUsed,
-			);
-			qwikAstroCanProceed
-				? await addAstroRoute(context, "route", packageJSonContents)
-				: errorHandling(
-						workspaceRoot,
-						isQwikAstro,
-						packageManagerUsed,
-						filesByPackageManager,
-					);
+			if (currentQwikAstroCanProceed()) {
+				await addAstroRoute(context, "route", packageJSonContents);
+			} else {
+				vscode.window.showErrorMessage("Not a Qwik Astro Project");
+			}
 		},
 	);
 
 	context.subscriptions.push(addCreateAstroRouteComponentCommand);
 
+	const url = () => {
+		const packageJSonContents =
+			JSON.parse(fs.readFileSync(`${workspaceRoot}/package.json`, "utf-8")) ||
+			undefined;
+
+		let url = "https://qwikui.com/";
+		if (
+			packageJSonContents.devDependencies?.["@qwik-ui/headless"] ||
+			packageJSonContents.dependencies?.["@qwik-ui/headless"]
+		) {
+			url = "https://qwikui.com/docs/headless/introduction/";
+		}
+		if (
+			packageJSonContents.devDependencies?.["@qwik-ui/styled"] ||
+			packageJSonContents.dependencies?.["@qwik-ui/styled"]
+		) {
+			url = "https://qwikui.com/docs/styled/introduction/";
+		}
+
+		return url;
+	};
 	const addQwikUI = vscode.commands.registerCommand(
 		"qwik-shortcuts.addQwikUI",
 		async () => {
-			let url = "https://qwikui.com/";
-			if (
-				packageJSonContents.devDependencies?.["@qwik-ui/headless"] ||
-				packageJSonContents.dependencies?.["@qwik-ui/headless"]
-			) {
-				url = "https://qwikui.com/docs/headless/introduction/";
-			}
-			if (
-				packageJSonContents.devDependencies?.["@qwik-ui/styled"] ||
-				packageJSonContents.dependencies?.["@qwik-ui/styled"]
-			) {
-				url = "https://qwikui.com/docs/styled/introduction/";
-			}
-
-			addQwikUIComponent(url);
+			addQwikUIComponent(url());
 		},
 	);
 
